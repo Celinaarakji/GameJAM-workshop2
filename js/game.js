@@ -42,16 +42,16 @@ function updateUI() {
     li.querySelector("span").textContent = state.systems[names[i]] ? state.codes[i] : "OFFLINE";
   });
   document.getElementById("inventory").textContent = hasKey(state) ? "SECURITY KEY" : "EMPTY";
-  document.getElementById("objective").textContent = !state.systems.movement ? "Reach the movement terminal." :
-    !state.systems.inventory ? "Collect the key. Activate the scanner." :
-    !state.systems.security ? "Authorize the security panel." : "Reach the exit. Enter your access words.";
+  document.getElementById("objective").textContent = !state.systems.movement ? "Activate M to open the first gate." :
+    !state.systems.inventory ? "Collect the key, then press E beside I." :
+    !state.systems.security ? "Press E beside S to authorize the exit." : "Reach the exit. Enter your access words.";
   draw();
 }
 function restore(name,index) {
   if (state.systems[name]) { say("System online. Access code " + (index+1) + ": " + state.codes[index] + "."); return; }
   state.systems[name] = true;
   state.codes[index] = accessWords[index];
-  say(name[0].toUpperCase()+name.slice(1)+" system restored. Access code "+(index+1)+": "+state.codes[index]+".");
+  say(name[0].toUpperCase()+name.slice(1)+" system restored. Access code "+(index+1)+": "+state.codes[index]+". "+["First gate open: cross the passage in the right wall.","Second gate open: cross into security.","Exit authorized: find the door marked ↗."][index]);
   updateUI();
 }
 function interact() {
@@ -85,7 +85,8 @@ function draw() {
     if(cell==="1"||cell==="2"){
       const open=cell==="1"?state.systems.movement:state.systems.inventory;
       ctx.fillStyle=open?"#5de5bb":"#c289ff";
-      for(let j=0;j<3;j++)ctx.fillRect(px+7+j*10,py+5,open?2:5,30);
+      if(open){ctx.fillRect(px+3,py+3,34,3);ctx.fillRect(px+3,py+34,34,3);}
+      else for(let j=0;j<3;j++)ctx.fillRect(px+7+j*10,py+5,5,30);
     }
   }));
   Object.entries(objects).forEach(([name,p])=>{
@@ -107,7 +108,7 @@ function resetRun() {
   document.querySelectorAll("dialog[open]").forEach(d=>d.close());
   state=freshState();state.started=true;
   document.getElementById("codes").reset();document.getElementById("codeError").textContent="";
-  say("Movement system malfunction detected. Reach the terminal marked M.");updateUI();canvas.focus();
+  say("Find the terminal marked M. Stand beside it and press E or Enter to open the first gate.");updateUI();canvas.focus();
 }
 document.addEventListener("keydown",event=>{
   if(!state.started||state.won||document.querySelector("dialog[open]"))return;
@@ -117,6 +118,10 @@ document.addEventListener("keydown",event=>{
   if(direction){event.preventDefault();if(movePlayer(state,direction,canEnter)){
     if(state.keyVisible&&state.player.x===objects.key.x&&state.player.y===objects.key.y){collectKey(state);say("Key collected. Take it to the scanner marked I.");}
     updateUI();
+  } else {
+    const cell = floor[state.player.y + direction[1]]?.[state.player.x + direction[0]];
+    if(cell === "1" && !state.systems.movement) say("GATE LOCKED: Stand beside M and press E or Enter to activate it.");
+    if(cell === "2" && !state.systems.inventory) say("GATE LOCKED: Collect the key, then stand beside I and press E or Enter.");
   }}else if(key==="e"||key==="Enter"){event.preventDefault();if(!event.repeat)interact();}
 });
 document.getElementById("start").onclick=resetRun;
